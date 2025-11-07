@@ -10,7 +10,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/<your_repo>/node-bluegreen.git'
+                git 'https://github.com/Sanjana-301/node-bluegreen.git'
             }
         }
 
