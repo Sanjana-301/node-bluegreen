@@ -23,8 +23,11 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                bat 'echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin'
-                bat 'docker push %IMAGE%:%BUILD_NUMBER%'
+
+                bat '''
+                powershell -Command "$pass = '%DOCKERHUB_CREDENTIALS_PSW%'; $pass | docker login -u '%DOCKERHUB_CREDENTIALS_USR%' --password-stdin"
+                docker push %IMAGE%:%BUILD_NUMBER%
+                '''
             }
         }
 
