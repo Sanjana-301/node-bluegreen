@@ -1,0 +1,24 @@
+version: "3"
+services:
+  blue:
+    image: sanjana4047/node-bluegreen:v1
+    container_name: blue
+    ports:
+      - "8081:3000"
+  green:
+    image: sanjana4047/node-bluegreen:v1
+    container_name: green
+    ports:
+      - "8082:3000"
+
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - blue
+      - green
