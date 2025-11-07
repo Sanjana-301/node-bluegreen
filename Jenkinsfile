@@ -16,37 +16,40 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t $IMAGE:$BUILD_NUMBER .'
+                // Use Windows variable syntax %VAR%
+                bat 'docker build -t %IMAGE%:%BUILD_NUMBER% .'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                bat 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-                bat 'docker push $IMAGE:$BUILD_NUMBER'
+                bat 'echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin'
+                bat 'docker push %IMAGE%:%BUILD_NUMBER%'
             }
         }
 
         stage('Deploy to Green') {
             steps {
                 bat '''
-                docker stop green || true
-                docker rm green || true
-                docker run -d --name green -p 8082:3000 $IMAGE:$BUILD_NUMBER
+                docker stop green || exit 0
+                docker rm green || exit 0
+                docker run -d --name green -p 8082:3000 %IMAGE%:%BUILD_NUMBER%
                 '''
             }
         }
 
         stage('Health Check Green') {
             steps {
-                bat 'curl -f http://localhost:8082 || (echo "Health check failed!" && exit 1)'
+                // Use PowerShell for HTTP check in Windows
+                bat 'powershell -Command "try {Invoke-WebRequest -Uri http://localhost:8082 -UseBasicParsing} catch { exit 1 }"'
             }
         }
 
         stage('Switch Traffic to Green') {
             steps {
+                // Use PowerShell to replace text in nginx.conf
                 bat '''
-                sed -i 's/blue:3000/green:3000/' nginx.conf
+                powershell -Command "(Get-Content nginx.conf) -replace 'blue:3000','green:3000' | Set-Content nginx.conf"
                 docker restart nginx
                 '''
             }
@@ -55,10 +58,22 @@ pipeline {
         stage('Shutdown Old (Blue)') {
             steps {
                 bat '''
-                docker stop blue || true
-                docker rm blue || true
+                docker stop blue || exit 0
+                docker rm blue || exit 0
                 '''
             }
+        }
+    }
+
+    post {
+        always {
+            bat 'docker image prune -f'
+        }
+        success {
+            echo "Deployment completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check the logs for details."
         }
     }
 }
